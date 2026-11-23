@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pop the Right Call - Data Handling Quiz</title>
+<link rel="icon" href="data:,">
+<style>
+@font-face{font-family:Nunito;font-weight:800;font-display:swap;src:url('fonts/nunito-latin-800-normal.woff2') format('woff2')}
+@font-face{font-family:Nunito;font-weight:900;font-display:swap;src:url('fonts/nunito-latin-900-normal.woff2') format('woff2')}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;background:#2a1a5e;overflow:hidden;font-family:Nunito,"Segoe UI",Arial,sans-serif;color:#2a1a5e;user-select:none;-webkit-user-select:none}
+body{display:flex;align-items:center;justify-content:center}
+#stage{position:relative;overflow:hidden;transform-origin:center center;flex:none;background:#bfe6fb url('Images/bg.webp') center/cover no-repeat}
+#stage.l{width:1280px;height:720px}
+#stage.p{width:720px}
+
+/* top bar */
+.pill{position:absolute;top:18px;background:#fff;border-radius:30px;padding:8px 22px;font-size:26px;font-weight:900;box-shadow:0 4px 0 rgba(42,26,94,.18);z-index:30}
+#pRound{left:24px}#pScore{left:50%;transform:translateX(-50%);background:#ffd24f}
+#pMute{right:24px;padding:8px 14px;line-height:0;cursor:pointer;border:0;font-family:inherit;color:#2a1a5e}
+#pMute svg{width:30px;height:30px}
+.p #pRound{font-size:22px}.p #pScore{font-size:22px}
+
+/* scenario card */
+#card{position:absolute;left:50%;transform:translateX(-50%);background:#fff;border-radius:26px;box-shadow:0 8px 0 rgba(42,26,94,.2);border-left:14px solid #5a32bf;z-index:20;padding:18px 28px 20px 26px}
+.l #card{top:84px;width:1080px}
+.p #card{top:92px;width:660px;padding:20px 26px 24px 24px}
+#card .lab{font-size:20px;letter-spacing:2px;font-weight:900;color:#7d52e6}
+#card .txt{font-size:34px;font-weight:800;line-height:1.22;margin-top:4px}
+.p #card .txt{font-size:38px}
+
+/* balloons */
+.b{position:absolute;left:0;top:0;border:0;background:none;cursor:pointer;z-index:10;will-change:transform;font-family:inherit;touch-action:manipulation}
+.l .b{width:230px;height:345px}
+.p .b{width:240px;height:360px}
+.b svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 10px 8px rgba(42,26,94,.18))}
+.b .lbl{position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);width:76%;text-align:center;color:#fff;font-weight:900;font-size:23px;line-height:1.12;text-shadow:0 2px 0 rgba(0,0,0,.28)}
+.p .b .lbl{font-size:26px}
+.b .key{position:absolute;left:50%;top:6%;transform:translateX(-50%);width:34px;height:34px;border-radius:50%;background:#fff;color:#2a1a5e;font-weight:900;font-size:20px;line-height:34px;text-align:center;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.b:hover .key,.b:focus-visible .key{background:#ffd24f}
+.b.ok svg{filter:drop-shadow(0 0 14px #22c55e) drop-shadow(0 0 4px #22c55e)}
+.b .tick{position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);width:90px;height:90px;border-radius:50%;background:#22c55e;color:#fff;font-size:60px;font-weight:900;line-height:90px;text-align:center;display:none;box-shadow:0 4px 0 rgba(0,0,0,.2)}
+.b.ok .tick{display:block}.b.ok .lbl,.b.ok .key{display:none}
+.b.dim{pointer-events:none}
+
+/* feedback panel */
+#fb{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:8px solid #22c55e;z-index:40;transform:translateY(105%);transition:transform .35s cubic-bezier(.2,.9,.3,1.1);padding:16px 32px 18px;display:flex;align-items:center;gap:26px}
+.l #fb{height:160px}.p #fb{height:230px;flex-wrap:wrap;gap:12px 20px;align-content:center}
+#fb.show{transform:none}
+#fb.bad{border-top-color:#ef4a5a}
+#fb .h{font-size:36px;font-weight:900;color:#15803d;flex:none;min-width:190px}
+#fb.bad .h{color:#c2262b}
+#fb .w{font-size:25px;font-weight:800;line-height:1.28;flex:1;color:#3b2a78}
+#fb .w i{font-style:normal;color:#7d52e6}
+.p #fb .h{min-width:0;width:100%}.p #fb .w{font-size:25px;flex:1 1 60%}
+.btn{border:0;cursor:pointer;font-family:inherit;font-weight:900;font-size:28px;color:#2a1a5e;background:#ffd24f;border-radius:20px;padding:14px 34px;box-shadow:0 6px 0 #c99a14;flex:none}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #c99a14}
+
+/* overlays */
+.ov{position:absolute;inset:0;background:rgba(42,26,94,.55);z-index:60;display:flex;align-items:center;justify-content:center;padding:30px}
+.ov.hide{display:none}
+.box{background:#fff;border-radius:34px;padding:34px 40px;text-align:center;box-shadow:0 10px 0 rgba(42,26,94,.25);max-width:880px}
+.p .box{padding:34px 28px;max-width:640px}
+.box .kick{font-size:22px;letter-spacing:3px;font-weight:900;color:#7d52e6}
+.box h1{font-size:60px;line-height:1.04;font-weight:900;margin:10px 0 14px;color:#2a1a5e}
+.p .box h1{font-size:52px}
+.box p{font-size:28px;font-weight:800;line-height:1.3;color:#3b2a78;margin-bottom:22px}
+.box .sm{font-size:21px;color:#6a5aa0;margin:16px 0 0}
+.score{font-size:130px;font-weight:900;color:#5a32bf;line-height:1}
+.badge{display:inline-block;background:#ffd24f;border-radius:30px;padding:8px 26px;font-size:32px;font-weight:900;margin:6px 0 14px}
+.rules{text-align:left;font-size:24px;font-weight:800;line-height:1.3;color:#3b2a78;margin:0 0 20px 0;list-style:none}
+.rules li{padding-left:34px;position:relative;margin-bottom:8px}
+.rules li:before{content:"✓";position:absolute;left:0;color:#22c55e;font-weight:900}
+.pop{position:absolute;border-radius:50%;pointer-events:none;z-index:50}
+</style>
+</head>
+<body>
+<div id="stage" class="l">
+  <div class="pill" id="pRound">Question 1 of 8</div>
+  <div class="pill" id="pScore">Marks: 0</div>
+  <button class="pill" id="pMute" aria-label="Toggle sound"></button>
+
+  <div id="card"><div class="lab" id="cLab">SCENARIO</div><div class="txt" id="cTxt"></div></div>
+
+  <div id="fb"><div class="h" id="fbH"></div><div class="w" id="fbW"></div><button class="btn" id="fbBtn">Next</button></div>
+
+  <div class="ov" id="intro"><div class="box">
+    <div class="kick">DATA HANDLING · SAMPLE MODULE</div>
+    <h1>Pop the<br>Right Call</h1>
+    <p>8 everyday situations with customer data. Read the scenario, then pop the balloon with the right action.</p>
+    <button class="btn" id="goBtn">Start</button>
+    <div class="sm">Wrong pop? You'll see why, and get a second try.</div>
+  </div></div>
+
+  <div class="ov hide" id="end"><div class="box">
+    <div class="kick">ROUND COMPLETE</div>
+    <div class="score" id="eScore">0</div>
+    <div class="badge" id="eBadge"></div>
+    <ul class="rules">
+      <li>Customer data moves through approved channels only.</li>
+      <li>Report mistakes and odd finds straight away.</li>
+      <li>Use dummy data for tests, and dispose of data properly.</li>
+    </ul>
+    <button class="btn" id="againBtn">Play again</button>
+    <div class="sm">Sample demo by keenmind designs. Not client content.</div>
+  </div></div>
+</div>
+
+<script>
+const QUESTIONS=[
+ {s:"A colleague asks you to WhatsApp them the customer list. They have a client call in 5 minutes.",
+  o:["Share it through the approved portal","WhatsApp it. It's urgent","Email it to their personal address","Send a screenshot instead"],
+  why:"Customer data goes through the approved portal only. Personal messaging apps are not allowed, even when you are in a hurry."},
+ {s:"You find a USB stick in the car park, labelled \"Payroll Q3\".",
+  o:["Hand it to IT or Security","Plug it in to find the owner","Take it home and check there","Leave it where it is"],
+  why:"Unknown devices can carry malware. Don't plug them in. IT or Security can check it safely and find the owner."},
+ {s:"You just emailed a customer file to the wrong person.",
+  o:["Report it straight away","Delete the email and say nothing","Ask them to delete it, tell no one","Wait and see if they reply"],
+  why:"A wrong-recipient email is an incident. Report it straight away so the damage can be limited. Hiding it makes it worse."},
+ {s:"You need to review customer data while working from a café.",
+  o:["Use the company VPN and a privacy screen","Connect to the café Wi-Fi","Ask the barista to watch your laptop","Forward the files to a friend's laptop"],
+  why:"Public Wi-Fi and shoulder-surfers are real risks. Use the company VPN and keep your screen private."},
+ {s:"Some old customer records are past their retention period.",
+  o:["Dispose of them securely, as scheduled","Keep them forever, just in case","Move them to your personal drive","Rename the files to hide them"],
+  why:"Keep data only as long as needed. Past that point, dispose of it securely and record that you did."},
+ {s:"You printed a customer list, and the printer is down the hall.",
+  o:["Collect it right away, shred it after","Leave it on the printer","Put it in the normal recycling","Take it home to finish later"],
+  why:"Printouts are data too. Collect them immediately and shred them when you are done. Never leave them unattended."},
+ {s:"A new intern asks to borrow your login so they can get started.",
+  o:["Ask your manager to request their access","Share it. They're trusted","Write it on a sticky note for them","Log in and let them watch"],
+  why:"Logins are personal. Each person gets their own access through the proper request, so every action is traceable."},
+ {s:"You need customer data to test a new tool.",
+  o:["Use masked or dummy data","Copy real data to your laptop","Use real data, just this once","Ask a friend for sample data"],
+  why:"Tests should never use real customer data. Masked or dummy data gives the same result without the risk."}
+];
+const COLORS=[['#8f6bf0','#4a24ac'],['#ffc24d','#e08a00'],['#3fd6c4','#0c8f82'],['#ff7a86','#d42a3c']];
+const $=id=>document.getElementById(id);
+const stage=$('stage');
+let mode='l', W=1280, H=720, balloons=[], queue=[], qi=0, score=0, firstTry=0, locked=true, raf=0, muted=false, ac=null, started=false;
+
+/* ---------- audio ---------- */
+function A(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(ac&&ac.state==='suspended') ac.resume(); return ac; }
+function tone(f,d,type='sine',v=.12,delay=0,slide=0){ if(muted)return; const c=A(); if(!c)return; const t=c.currentTime+delay; const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(f+slide,t+d); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(c.destination); o.start(t); o.stop(t+d+.02); }
+function popSnd(){ if(muted)return; const c=A(); if(!c)return; const n=c.sampleRate*.12, b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3); const s=c.createBufferSource(); s.buffer=b; const g=c.createGain(); g.gain.value=.5; s.connect(g).connect(c.destination); s.start(); tone(220,.1,'triangle',.12,0,-120); }
+const sndGood=()=>{tone(660,.14,'sine',.14);tone(880,.14,'sine',.14,.1);tone(1175,.3,'sine',.14,.2)};
+const sndBad=()=>{tone(220,.22,'sawtooth',.08);tone(165,.3,'sawtooth',.08,.18)};
+const sndEnd=()=>[523,659,784,1047].forEach((f,i)=>tone(f,.35,'triangle',.14,i*.14));
+function setMuteIcon(){ $('pMute').innerHTML = muted
+ ? '<svg viewBox="0 0 24 24" fill="none" stroke="#2a1a5e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>'
+ : '<svg viewBox="0 0 24 24" fill="none" stroke="#2a1a5e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg>'; }
+$('pMute').onclick=()=>{muted=!muted;setMuteIcon();};
+setMuteIcon();
+
+/* ---------- layout ---------- */
+function fit(){
+  const m = innerHeight>innerWidth ? 'p':'l';
+  mode=m; stage.className=m; W=m==='l'?1280:720;
+  H = m==='l' ? 720 : Math.min(1700, Math.max(1340, Math.round(720*innerHeight/innerWidth)));
+  stage.style.width=W+'px'; stage.style.height=H+'px';
+  layoutBalloons();
+  const s=Math.min(innerWidth/W, innerHeight/H);
+  stage.style.transform=`scale(${s})`;
+  stage.style.margin=`${-(H*(1-s))/2}px ${-(W*(1-s))/2}px`;
+}
+function targets(i){
+  if(mode==='l') return {x:[200,480,760,1040][i], y:438, w:230, h:345};
+  const cell=(H-230-330)/2, r=i<2?0:1;
+  return {x:[190,530,190,530][i], y:330+cell*(r+.5)-20, w:240, h:360};
+}
+function layoutBalloons(){ balloons.forEach((b,i)=>{ const t=targets(i); b.tx=t.x; b.ty=t.y; b.w=t.w; b.h=t.h; }); }
+addEventListener('resize',fit); addEventListener('orientationchange',()=>setTimeout(fit,150));
+
+/* ---------- balloons ---------- */
+function svgFor(c,id){
+  return `<svg viewBox="0 0 200 300"><defs><radialGradient id="g${id}" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></radialGradient></defs>
+  <path d="M100 214 C94 244 112 262 100 296" fill="none" stroke="#8a7fb0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M100 8 C150 8 188 48 188 108 C188 168 144 208 100 212 C56 208 12 168 12 108 C12 48 50 8 100 8Z" fill="url(#g${id})"/>
+  <path d="M92 212 L108 212 L116 226 L84 226Z" fill="${c[1]}"/>
+  <ellipse cx="62" cy="62" rx="20" ry="32" fill="#fff" opacity=".32" transform="rotate(25 62 62)"/></svg>`;
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function spawn(q){
+  const idx=shuffle([0,1,2,3]);
+  balloons=idx.map((oi,i)=>{
+    const el=document.createElement('button'); el.className='b'; el.setAttribute('aria-label',`Option ${i+1}: ${q.o[oi]}`);
+    el.innerHTML=svgFor(COLORS[i],i)+`<span class="key">${i+1}</span><span class="lbl">${q.o[oi]}</span><span class="tick">✓</span>`;
+    stage.appendChild(el);
+    const t=targets(i);
+    const b={el,correct:oi===0,tx:t.x,ty:t.y,w:t.w,h:t.h,t0:performance.now()+i*140,phase:Math.random()*6.28,gone:false,away:0};
+    el.onclick=()=>choose(b); return b;
+  });
+}
+function frame(now){
+  balloons.forEach(b=>{
+    if(b.gone) return;
+    let p=Math.min(1,Math.max(0,(now-b.t0)/1700)); p=1-Math.pow(1-p,3);
+    const startY=H+b.h*.7;
+    let y=startY+(b.ty-startY)*p;
+    const bob=Math.sin(now/700+b.phase)*(p>=1?10:3);
+    const sway=Math.sin(now/1100+b.phase*2)*8*p;
+    if(b.away) y-=Math.pow((now-b.away)/1000,2)*900;
+    b.el.style.transform=`translate(${b.tx-b.w/2+sway}px,${y+bob-b.h/2}px) rotate(${sway*.25}deg)`;
+    b.cx=b.tx+sway; b.cy=y+bob-b.h*.15;
+  });
+  raf=requestAnimationFrame(frame);
+}
+function burst(b,color){
+  const cx=b.cx, cy=b.cy;
+  for(let i=0;i<14;i++){
+    const d=document.createElement('div'); d.className='pop'; const sz=10+Math.random()*16;
+    d.style.cssText+=`width:${sz}px;height:${sz}px;left:${cx-sz/2}px;top:${cy-sz/2}px;background:${color}`;
+    stage.appendChild(d);
+    const a=i/14*6.28+Math.random()*.4, r=90+Math.random()*110;
+    d.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${Math.cos(a)*r}px,${Math.sin(a)*r+40}px) scale(.2)`,opacity:0}],{duration:650,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>d.remove();
+  }
+}
+function clearBalloons(){ balloons.forEach(b=>b.el.remove()); balloons=[]; }
+
+/* ---------- flow ---------- */
+function showQ(){
+  const item=queue[qi]; const q=item.q;
+  const total=QUESTIONS.length;
+  $('pRound').textContent = item.retry ? 'Second try' : `Question ${item.n} of ${total}`;
+  $('cLab').textContent = item.retry ? 'SECOND TRY' : `SCENARIO ${item.n}`;
+  $('cTxt').textContent = q.s;
+  $('fb').classList.remove('show');
+  clearBalloons(); spawn(q); locked=false;
+}
+function choose(b){
+  if(locked) return; locked=true; A();
+  const item=queue[qi]; const ok=b.correct;
+  popSnd(); burst(b, COLORS[balloons.indexOf(b)][0]); b.gone=true; b.el.remove();
+  let pts=0;
+  if(ok){ pts=item.retry?5:10; score+=pts; if(!item.retry) firstTry++; setTimeout(sndGood,120); }
+  else { setTimeout(sndBad,120); if(!item.retry) queue.push({q:item.q,n:item.n,retry:true}); }
+  $('pScore').textContent=`Marks: ${score}`;
+  const now=performance.now();
+  balloons.forEach(o=>{ if(o.gone) return; if(!ok && o.correct){ o.el.classList.add('ok'); } else { o.away=now; o.el.classList.add('dim'); setTimeout(()=>{o.el.remove(); o.gone=true;},1400); } });
+  const fb=$('fb'); fb.classList.toggle('bad',!ok);
+  $('fbH').textContent= ok ? (pts===10?'Good call! +10':'Got it! +5') : 'Not quite';
+  $('fbW').innerHTML = (ok?'':'<i>Right answer: '+item.q.o[0]+'.</i> ')+item.q.why;
+  const last=qi===queue.length-1;
+  $('fbBtn').textContent = last ? 'Finish' : 'Next';
+  setTimeout(()=>fb.classList.add('show'), ok?450:700);
+  window.dispatchEvent(new CustomEvent('quiz:answer',{detail:{question:item.n,correct:ok,retry:!!item.retry,score}}));
+}
+$('fbBtn').onclick=()=>{ if(!locked) return; qi++; if(qi>=queue.length) finish(); else showQ(); };
+function finish(){
+  clearBalloons(); $('fb').classList.remove('show');
+  const max=QUESTIONS.length*10; $('eScore').textContent=`${score}/${max}`;
+  $('eBadge').textContent = score>=70 ? 'Data Guardian' : 'Getting there. Try again!';
+  $('end').classList.remove('hide'); sndEnd();
+  window.dispatchEvent(new CustomEvent('quiz:complete',{detail:{score,max,firstTry}}));
+}
+function start(){
+  score=0; firstTry=0; qi=0; $('pScore').textContent='Marks: 0';
+  queue=QUESTIONS.map((q,i)=>({q,n:i+1,retry:false}));
+  $('intro').classList.add('hide'); $('end').classList.add('hide'); showQ();
+}
+$('goBtn').onclick=()=>{A();start();};
+$('againBtn').onclick=()=>{A();start();};
+addEventListener('keydown',e=>{ const k=parseInt(e.key,10); if(k>=1&&k<=4&&!locked&&balloons[k-1]&&!balloons[k-1].gone) choose(balloons[k-1]); if((e.key==='Enter'||e.key===' ')&&locked&&$('fb').classList.contains('show')) $('fbBtn').click(); });
+
+fit(); requestAnimationFrame(frame);
+$('cTxt').textContent=QUESTIONS[0].s;
+</script>
+</body>
+</html>
