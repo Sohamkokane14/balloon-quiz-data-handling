@@ -140,16 +140,44 @@ const stage=$('stage');
 let mode='l', W=1280, H=720, balloons=[], queue=[], qi=0, score=0, firstTry=0, locked=true, raf=0, muted=false, ac=null, started=false;
 
 /* ---------- audio ---------- */
+/* master bus: mute switches everything off. Music bus: fades in/out. */
+let mg=null, mus=null;
+function OUT(){ const c=A(); if(!c) return null; if(!mg){ mg=c.createGain(); mg.gain.value=muted?0:1; mg.connect(c.destination); mus=c.createGain(); mus.gain.value=0; mus.connect(mg); } return mg; }
+
+/* background music: original loop (Am-F-C-G, 96 BPM), generated in the browser */
+const BPM=96, STEP=60/BPM/2;
+const CHORDS=[[57,60,64],[53,57,60],[48,52,55],[55,59,62]];
+const ARP=[0,1,2,1,0,2,1,2];
+let musicOn=false, mTimer=null, mNext=0, mStep=0;
+function hz(n){ return 440*Math.pow(2,(n-69)/12); }
+function padChord(ch,t,dur){ const c=ac; ch.forEach(n=>{ const o=c.createOscillator(), g=c.createGain(); o.type='triangle'; o.frequency.value=hz(n); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.022,t+.6); g.gain.linearRampToValueAtTime(0,t+dur); o.connect(g).connect(mus); o.start(t); o.stop(t+dur+.05); }); }
+function arpNote(n,t){ const c=ac; const o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=hz(n); g.gain.setValueAtTime(.04,t); g.gain.exponentialRampToValueAtTime(.0001,t+.42); o.connect(g).connect(mus); o.start(t); o.stop(t+.45); }
+function musicTick(){
+  if(!musicOn||!ac||!mus) return;
+  while(mNext<ac.currentTime+.25){
+    const bar=Math.floor(mStep/8)%4, s=mStep%8, ch=CHORDS[bar];
+    if(s===0) padChord(ch,mNext,8*STEP);
+    arpNote(ch[ARP[s]]+12,mNext);
+    mNext+=STEP; mStep++;
+  }
+}
+function startMusic(){
+  A(); OUT(); if(!ac||!mus||musicOn) return;
+  musicOn=true; mStep=0; mNext=ac.currentTime+.1;
+  mus.gain.cancelScheduledValues(ac.currentTime); mus.gain.setValueAtTime(0,ac.currentTime); mus.gain.linearRampToValueAtTime(1,ac.currentTime+1.2);
+  if(!mTimer) mTimer=setInterval(musicTick,80);
+}
+function stopMusic(){ if(!musicOn||!ac||!mus) return; musicOn=false; mus.gain.cancelScheduledValues(ac.currentTime); mus.gain.setTargetAtTime(0,ac.currentTime,.4); }
 function A(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(ac&&ac.state==='suspended') ac.resume(); return ac; }
-function tone(f,d,type='sine',v=.12,delay=0,slide=0){ if(muted)return; const c=A(); if(!c)return; const t=c.currentTime+delay; const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(f+slide,t+d); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(c.destination); o.start(t); o.stop(t+d+.02); }
-function popSnd(){ if(muted)return; const c=A(); if(!c)return; const n=c.sampleRate*.12, b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3); const s=c.createBufferSource(); s.buffer=b; const g=c.createGain(); g.gain.value=.5; s.connect(g).connect(c.destination); s.start(); tone(220,.1,'triangle',.12,0,-120); }
+function tone(f,d,type='sine',v=.12,delay=0,slide=0){ if(muted)return; const c=A(); if(!c)return; const t=c.currentTime+delay; const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(f+slide,t+d); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g).connect(OUT()); o.start(t); o.stop(t+d+.02); }
+function popSnd(){ if(muted)return; const c=A(); if(!c)return; const n=c.sampleRate*.12, b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3); const s=c.createBufferSource(); s.buffer=b; const g=c.createGain(); g.gain.value=.5; s.connect(g).connect(OUT()); s.start(); tone(220,.1,'triangle',.12,0,-120); }
 const sndGood=()=>{tone(660,.14,'sine',.14);tone(880,.14,'sine',.14,.1);tone(1175,.3,'sine',.14,.2)};
 const sndBad=()=>{tone(220,.22,'sawtooth',.08);tone(165,.3,'sawtooth',.08,.18)};
 const sndEnd=()=>[523,659,784,1047].forEach((f,i)=>tone(f,.35,'triangle',.14,i*.14));
 function setMuteIcon(){ $('pMute').innerHTML = muted
  ? '<svg viewBox="0 0 24 24" fill="none" stroke="#2a1a5e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>'
  : '<svg viewBox="0 0 24 24" fill="none" stroke="#2a1a5e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/></svg>'; }
-$('pMute').onclick=()=>{muted=!muted;setMuteIcon();};
+$('pMute').onclick=()=>{muted=!muted;setMuteIcon(); if(mg) mg.gain.value=muted?0:1;};
 setMuteIcon();
 
 /* ---------- layout ---------- */
@@ -250,7 +278,7 @@ function finish(){
   clearBalloons(); $('fb').classList.remove('show');
   const max=QUESTIONS.length*10; $('eScore').textContent=`${score}/${max}`;
   $('eBadge').textContent = score>=70 ? 'Data Guardian' : 'Getting there. Try again!';
-  $('end').classList.remove('hide'); sndEnd();
+  $('end').classList.remove('hide'); stopMusic(); sndEnd();
   window.dispatchEvent(new CustomEvent('quiz:complete',{detail:{score,max,firstTry}}));
 }
 function start(){
@@ -258,8 +286,8 @@ function start(){
   queue=QUESTIONS.map((q,i)=>({q,n:i+1,retry:false}));
   $('intro').classList.add('hide'); $('end').classList.add('hide'); showQ();
 }
-$('goBtn').onclick=()=>{A();start();};
-$('againBtn').onclick=()=>{A();start();};
+$('goBtn').onclick=()=>{A();startMusic();start();};
+$('againBtn').onclick=()=>{A();startMusic();start();};
 addEventListener('keydown',e=>{ const k=parseInt(e.key,10); if(k>=1&&k<=4&&!locked&&balloons[k-1]&&!balloons[k-1].gone) choose(balloons[k-1]); if((e.key==='Enter'||e.key===' ')&&locked&&$('fb').classList.contains('show')) $('fbBtn').click(); });
 
 fit(); requestAnimationFrame(frame);
